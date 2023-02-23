@@ -7,8 +7,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1m0s
-  ref:
-    branch: main
+  ref: {}
   secretRef:
     name: flux-system
   url: ssh://git@github.com/rifletcher/flux2.git
