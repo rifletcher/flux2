@@ -1,0 +1,107 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: pdfconverter1
+spec:
+  type: NodePort
+  selector:
+    project: fenghuang
+    app: pdfconverter1
+  ports:
+  - protocol: TCP
+    name: http
+    port: 5000
+    targetPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fenghuang-pdfconverter1
+  annotations:
+    fluxcd.io/automated: "true"
+    fluxcd.io/tag.pdfconverter: glob:playground-*
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project: fenghuang
+      app: pdfconverter1
+  strategy:
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: enabled
+      labels:
+        project: fenghuang
+        app: pdfconverter1
+    spec:
+      containers:
+      - name: pdfconverter
+        image: eu.gcr.io/gfs-ecm/gfs-pdf-converter:dev-28592
+        resources:
+          requests:
+            memory: "450Mi"
+            cpu: "20m"
+          limits:
+            memory: "450Mi"
+            cpu: "20m"
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: environment
+              key: environment
+        - name: MAINTAINER
+          valueFrom:
+            configMapKeyRef:
+              name: fenghuang
+              key: maintainer
+        - name: APPLICATION
+          valueFrom:
+            configMapKeyRef:
+              name: fenghuang
+              key: project
+        - name: SERVICE
+          value: pdfconverter
+        - name: DD_KEY
+          value: dd)key
+        - name: DD_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_ENV
+          value: playground
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+            scheme: HTTP
+          failureThreshold: 1
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+            scheme: HTTP
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        ports:
+        - name: http
+          containerPort: 5000
+      imagePullSecrets:
+      - name: gfs-ecm-registry       
